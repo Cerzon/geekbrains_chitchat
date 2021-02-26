@@ -56,6 +56,8 @@ def main(addr, port):
 
 if __name__ == '__main__':
     err_flag = False
+    addr = ''
+    port = 0
     args = sys.argv[1:]
     if 1 <= len(args) <=2:
         addr, *port = args
@@ -66,7 +68,6 @@ if __name__ == '__main__':
                 err_flag = True
         else:
             port = PORT
-        main(addr, port)
     else:
         err_flag = True
 
@@ -74,3 +75,5 @@ if __name__ == '__main__':
         print('Usage: client.py <addr> [<port>]\n\n'\
             'addr\t\t- server ip or host name\n'\
             'port (optional)\t- port number; must be integer (default = %d)' % PORT)
+    else:
+        main(addr, port)
