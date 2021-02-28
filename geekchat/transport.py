@@ -2,10 +2,10 @@
 Transport
 """
 from socket import socket, AF_INET, SOCK_STREAM
-from .settings import MSGLEN_SZ, ENCODING, LISTEN_QUEUE
+from .settings import LEN_SZ, ENCODING, LISTEN_QUEUE
 
 
-def chat_socket(addr: str, port: int, server: bool=False):
+def chat_socket(addr: str, port: int, server: bool=False) -> socket:
     """ Return socket binded or connected to address:port
     """
     if 1024 <= port <= 65535:
@@ -19,13 +19,13 @@ def chat_socket(addr: str, port: int, server: bool=False):
     raise ValueError('Port number must be in range 1024-65535')
 
 
-def send_msg(sock: socket, message: str):
+def send_data(sock: socket, data: str):
     """ Convert string message to bytes and send it thru the socket
     """
-    payload = message.encode(encoding=ENCODING)
+    payload = data.encode(encoding=ENCODING)
     pl_len = len(payload)
-    len_hdr = pl_len.to_bytes(MSGLEN_SZ, byteorder='big')
-    total_len = MSGLEN_SZ + pl_len
+    len_hdr = pl_len.to_bytes(LEN_SZ, byteorder='big')
+    total_len = LEN_SZ + pl_len
     package = b''.join((len_hdr, payload))
     total_sent = 0
     while total_sent < total_len:
@@ -35,7 +35,7 @@ def send_msg(sock: socket, message: str):
         total_sent += sent
 
 
-def receive_msg(sock: socket) -> str:
+def receive_data(sock: socket) -> str:
     """ Return message recieved thru socket and converted to string
     """
     def _cycle_recv(length: int) -> bytes:
@@ -49,6 +49,6 @@ def receive_msg(sock: socket) -> str:
             rcvd += len(chunk)
         return b''.join(chunks)
 
-    msg_len = int.from_bytes(_cycle_recv(MSGLEN_SZ), byteorder='big')
+    msg_len = int.from_bytes(_cycle_recv(LEN_SZ), byteorder='big')
     return _cycle_recv(msg_len).decode(encoding=ENCODING)
 
