@@ -6,16 +6,36 @@ from .protocol import (compose_response, check_request, ACT_PRESENCE, ACT_MSG,
                         FIELD_RCPNT, FIELD_USER, CODE_RESP_OK,
                         CODE_RESP_ACCEPTED, CODE_ERR_WRONG_DATA)
 from .transport import chat_socket, send_data, receive_data
+from log.server_log_config import srv_logger
 
 
 def start_server(addr: str, port: int):
-    with closing(chat_socket(addr, port, server=True)) as srv:
+    try:
+        srv = chat_socket(addr, port, server=True)
+    except Exception as e:
+        srv_logger.critical('Ошибка при создании сокета')
+        raise e
+
+    with closing(srv):
 
         with closing(srv.accept()[0]) as convo:
             keep_connection = True
             while keep_connection:
-                response, keep_connection = process_request(receive_data(convo))
-                send_data(convo, response)
+                try:
+                    incoming = receive_data(convo)
+                except Exception as e:
+                    srv_logger.critical('Ошибка при получении данных')
+                    raise e
+                try:
+                    response, keep_connection = process_request(incoming)
+                except Exception as e:
+                    srv_logger.critical('Ошибка при обработке полученных данных')
+                    raise e
+                try:
+                    send_data(convo, response)
+                except Exception as e:
+                    srv_logger.critical('Ошибка при отправке данных')
+                    raise e
 
 
 def response_presence(**kwargs):

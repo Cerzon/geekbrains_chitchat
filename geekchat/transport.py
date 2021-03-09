@@ -25,14 +25,8 @@ def send_data(sock: socket, data: str):
     payload = data.encode(encoding=ENCODING)
     pl_len = len(payload)
     len_hdr = pl_len.to_bytes(LEN_SZ, byteorder='big')
-    total_len = LEN_SZ + pl_len
     package = b''.join((len_hdr, payload))
-    total_sent = 0
-    while total_sent < total_len:
-        sent = sock.send(package[total_sent:])
-        if sent == 0:
-            raise RuntimeError('error occured while sending: socket broken')
-        total_sent += sent
+    sock.sendall(package)
 
 
 def receive_data(sock: socket) -> str:
