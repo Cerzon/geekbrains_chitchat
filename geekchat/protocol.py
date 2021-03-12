@@ -4,6 +4,7 @@ JIM protocol processing
 from functools import partial
 import json
 from time import time
+from .log.staff import logged
 
 
 # field names
@@ -246,6 +247,7 @@ RESPONSE_FIELDSET = {
 }
 
 
+@logged
 def compose_data(def_val, *args, time_fn=time, data_tpls: dict=None) -> str:
     """
     Return string with dictionary, formed with JIM protocol template and
@@ -270,6 +272,7 @@ compose_request = partial(compose_data, data_tpls=ACTION_TPLS)
 compose_response = partial(compose_data, data_tpls=RESPONSE_TPLS)
 
 
+@logged
 def check_protocol(data: dict, def_field: str=None,
                     fieldset: dict=None, data_name: str=None) -> tuple:
     """

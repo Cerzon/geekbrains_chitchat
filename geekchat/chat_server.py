@@ -6,56 +6,50 @@ from .protocol import (compose_response, check_request, ACT_PRESENCE, ACT_MSG,
                         FIELD_RCPNT, FIELD_USER, CODE_RESP_OK,
                         CODE_RESP_ACCEPTED, CODE_ERR_WRONG_DATA)
 from .transport import chat_socket, send_data, receive_data
-from log.server_log_config import srv_logger
+from .log.server_log_config import start_logger
+from .log.staff import logged
 
 
+start_logger()
+
+
+@logged
 def start_server(addr: str, port: int):
-    try:
-        srv = chat_socket(addr, port, server=True)
-    except Exception as e:
-        srv_logger.critical('Ошибка при создании сокета')
-        raise e
+    srv = chat_socket(addr, port, server=True)
 
     with closing(srv):
 
         with closing(srv.accept()[0]) as convo:
             keep_connection = True
             while keep_connection:
-                try:
-                    incoming = receive_data(convo)
-                except Exception as e:
-                    srv_logger.critical('Ошибка при получении данных')
-                    raise e
-                try:
-                    response, keep_connection = process_request(incoming)
-                except Exception as e:
-                    srv_logger.critical('Ошибка при обработке полученных данных')
-                    raise e
-                try:
-                    send_data(convo, response)
-                except Exception as e:
-                    srv_logger.critical('Ошибка при отправке данных')
-                    raise e
+                incoming = receive_data(convo)
+                response, keep_connection = process_request(incoming)
+                send_data(convo, response)
 
 
+@logged
 def response_presence(**kwargs):
     info = 'Hello {}!'.format(kwargs.get(FIELD_USER, {}).get(FIELD_ACC, None))
     return compose_response(CODE_RESP_OK, info), True
 
 
+@logged
 def response_msg(**kwargs):
     info = 'Your message sent to {}'.format(kwargs.get(FIELD_RCPNT, None))
     return compose_response(CODE_RESP_ACCEPTED, info), True
 
 
+@logged
 def response_wrong_data(*args):
     return compose_response(CODE_ERR_WRONG_DATA, *args), True
 
 
+@logged
 def response_quit():
     return compose_response(CODE_RESP_OK, 'Bye'), False
 
 
+@logged
 def process_request(rqst: str):
     try:
         request = json.loads(rqst)
