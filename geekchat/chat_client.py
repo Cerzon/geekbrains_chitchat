@@ -2,15 +2,16 @@ from contextlib import closing
 
 from .protocol import compose_request, ACTION_TPLS, ACT_MSG, ACT_PRESENCE
 from .transport import chat_socket, send_data, receive_data
-from log.client_log_config import clt_logger
+from .log.client_log_config import start_logger
+from .log.staff import logged
 
 
+start_logger()
+
+
+@logged
 def start_client(addr: str, port: int):
-    try:
-        client = chat_socket(addr, port)
-    except Exception as e:
-        clt_logger.critical('Ошибка при создании сокета')
-        raise e
+    client = chat_socket(addr, port)
 
     with closing(client):
 
@@ -21,12 +22,8 @@ def start_client(addr: str, port: int):
 
         # initial request-response session
         rqst = compose_request(ACT_PRESENCE, account_name, status)
-        try:
-            send_data(client, rqst)
-            resp = receive_data(client)
-        except Exception as e:
-            clt_logger.critical('Случилось страшное')
-            raise e
+        send_data(client, rqst)
+        resp = receive_data(client)
         print(resp)
 
         # main loop
@@ -46,12 +43,8 @@ def start_client(addr: str, port: int):
                                         account_name, '', user_input)
 
             if rqst:
-                try:
-                    send_data(client, rqst)
-                    resp = receive_data(client)
-                except Exception as e:
-                    clt_logger.critical('Произошло нечто непоправимое')
-                    raise e
+                send_data(client, rqst)
+                resp = receive_data(client)
                 print(resp)
                 if 'Bye' in resp:
                     break

@@ -3,8 +3,10 @@ Transport
 """
 from socket import socket, AF_INET, SOCK_STREAM
 from .settings import LEN_SZ, ENCODING, LISTEN_QUEUE
+from .log.staff import logged
 
 
+@logged
 def chat_socket(addr: str, port: int, server: bool=False) -> socket:
     """ Return socket binded or connected to address:port
     """
@@ -19,6 +21,7 @@ def chat_socket(addr: str, port: int, server: bool=False) -> socket:
     raise ValueError('Port number must be in range 1024-65535')
 
 
+@logged
 def send_data(sock: socket, data: str):
     """ Convert string message to bytes and send it thru the socket
     """
@@ -29,6 +32,7 @@ def send_data(sock: socket, data: str):
     sock.sendall(package)
 
 
+@logged
 def receive_data(sock: socket) -> str:
     """ Return message recieved thru socket and converted to string
     """
