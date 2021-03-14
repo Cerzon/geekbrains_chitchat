@@ -3,9 +3,9 @@ import logging
 
 
 def logged(func):
+    _logger = logging.getLogger()
     def wrapper(*args, **kwargs):
-        _logger = logging.getLogger()
-        _logger.info(
+        _logger.debug(
             'Вызов %(fn)s с аргументами %(pa)s %(kwa)s из %(caller)s' % {
                 'fn': func.__name__,
                 'pa': args,
