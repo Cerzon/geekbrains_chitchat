@@ -15,9 +15,9 @@ def logged(func):
         )
         try:
             result = func(*args, **kwargs)
-        except Exception as e:
+        except:
             _logger.exception('Мы всё уронили...')
-            raise e
+            raise
         return result
 
     return wrapper
