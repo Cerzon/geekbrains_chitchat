@@ -1,28 +1,19 @@
-import sys
+""" Запуск "одностороннего" клиента:
+    с флагом --sender - только отправка данных на сервер;
+    без флага --sender - только получение данных от сервера.
+"""
+import click
 
 from geekchat.chat_client import start_client
-from geekchat.settings import PORT
+from geekchat.settings import HOST_IP, PORT
 
 
-err_flag = False
-addr = ''
-port = 0
-args = sys.argv[1:]
-if 1 <= len(args) <=2:
-    addr, *port = args
-    if port:
-        try:
-            port = int(port[0])
-        except ValueError:
-            err_flag = True
-    else:
-        port = PORT
-else:
-    err_flag = True
+@click.command()
+@click.option('-a', 'addr', default=HOST_IP, type=str)
+@click.option('-p', 'port', default=PORT, type=int)
+@click.option('--sender', is_flag=True)
+def main(addr: str, port: int, sender):
+    start_client(addr, port, sender)
 
-if err_flag:
-    print('Usage: client.py <addr> [<port>]\n\n'\
-        'addr\t\t- server ip or host name\n'\
-        'port (optional)\t- port number; must be integer (default = %d)' % PORT)
-else:
-    start_client(addr, port)
+
+main()

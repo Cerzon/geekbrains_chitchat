@@ -1,6 +1,6 @@
 from contextlib import closing
 import json
-import selectors
+from select import select
 
 from .protocol import (compose_response, check_request, ACT_PRESENCE, ACT_MSG,
                         ACT_QUIT, FIELD_ACC, FIELD_ACTION, FIELD_TIME,
@@ -15,66 +15,64 @@ LOGGER = start_logger()
 
 
 @logged
-def accept_connection(sel, subscribers, srv_listen_socket, _):
-    convo_socket, addr = srv_listen_socket.accept()
-    LOGGER.info(f'Соединение с адресом {addr}')
-    convo_socket.setblocking(False)
-    sel.register(
-        convo_socket,
-        selectors.EVENT_READ | selectors.EVENT_WRITE,
-        process_events
-    )
-    subscribers[convo_socket] = ''
-
-
-@logged
-def disconnect_subscriber(sel, subscribers, convo_socket):
-    LOGGER.info('Соединение %s закрыто' % convo_socket.fileno())
-    sel.unregister(convo_socket)
-    convo_socket.close()
-    del subscribers[convo_socket]
-
-
-@logged
-def process_events(sel, subscribers, convo_socket, mask):
-    if mask & selectors.EVENT_READ:
+def read_requests(sockets_to_read, all_connections):
+    
+    requests = {}
+    
+    for source in sockets_to_read:
         try:
-            incoming = receive_data(convo_socket)
+            data = receive_data(source)
+            requests[source] = data
         except:
-            disconnect_subscriber(sel, subscribers, convo_socket)
-        for sub_socket in subscribers:
-            if sub_socket is convo_socket:
-                continue
-            subscribers[sub_socket] += incoming
+            LOGGER.info(f'Соединение {source.fileno()} разорвано')
+            all_connections.remove(source)
+            source.close()
+    
+    return requests
 
-    if mask & selectors.EVENT_WRITE:
-        outgoing = subscribers[convo_socket]
-        if outgoing:
+
+@logged
+def write_responses(requests, sockets_to_write, all_connections):
+    
+    for source, data in requests.items():
+        for destination in sockets_to_write:
+            if destination is source:
+                continue
             try:
-                send_data(convo_socket, outgoing)
+                send_data(destination, data)
             except:
-                disconnect_subscriber(sel, subscribers, convo_socket)
+                LOGGER.info(f'Соединение {destination.fileno()} разорвано')
+                all_connections.remove(destination)
+                destination.close()
 
 
 @logged
 def start_server(addr: str, port: int):
     srv_listen_socket = chat_socket(addr, port, server=True)
-    srv_listen_socket.setblocking(False)
+    srv_listen_socket.settimeout(0.2)
+    wait = 0
 
-    subscribers = {}
+    all_connections = []
 
     with closing(srv_listen_socket):
-        with selectors.DefaultSelector() as sel:
-            sel.register(
-                srv_listen_socket,
-                selectors.EVENT_READ,
-                accept_connection
-            )
-            while True:
-                events = sel.select()
-                for key, mask in events:
-                    callback = key.data
-                    callback(sel, subscribers, key.fileobj, mask)
+        while True:
+            try:
+                connection, c_addr = srv_listen_socket.accept()
+            except OSError:
+                pass
+            else:
+                LOGGER.info(f'Соединение {connection.fileno()} с адресом {c_addr}')
+                all_connections.append(connection)
+            finally:
+                r = []
+                w = []
+                try:
+                    r, w, _ = select(all_connections, all_connections, [], wait)
+                except:
+                    pass
+
+                requests = read_requests(r, all_connections)
+                write_responses(requests, w, all_connections)
 
 
 @logged
