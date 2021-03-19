@@ -1,5 +1,4 @@
 from contextlib import closing
-from socket import socket
 from threading import Thread
 from queue import Queue
 
@@ -57,7 +56,7 @@ def start_client(addr: str, port: int):
 
 
 @logged
-def user_input_loop(user_input_queue: Queue):
+def user_input_loop(user_input_queue):
     while True:
         user_input = input()
         if user_input:
@@ -65,6 +64,6 @@ def user_input_loop(user_input_queue: Queue):
 
 
 @logged
-def receive_data_loop(src_sock: socket, received_data_queue: Queue):
+def receive_data_loop(src_sock, received_data_queue):
     while True:
         received_data_queue.put_nowait(receive_data(src_sock))
