@@ -10,41 +10,44 @@ start_logger()
 
 
 @logged
-def start_client(addr: str, port: int):
+def start_client(addr: str, port: int, sender: bool=False):
+    """ If sender is True - only sends data to server,
+        otherwise listen only
+    """
     client = chat_socket(addr, port)
 
     with closing(client):
 
         account_name = ''
-        while not account_name:
-            account_name = input('login: ')
-        status = input('status: ')
 
-        # initial request-response session
-        rqst = compose_request(ACT_PRESENCE, account_name, status)
-        send_data(client, rqst)
-        resp = receive_data(client)
-        print(resp)
+        if sender:
+            while not account_name:
+                account_name = input('login: ')
+            status = input('status: ')
+
+            # initial request-response session
+            rqst = compose_request(ACT_PRESENCE, account_name, status)
+            send_data(client, rqst)
 
         # main loop
         while True:
-            print('type /quit for quit')
-            user_input = input('Message: ')
-            rqst = None
+            if sender:
+                print('type /quit for quit')
+                user_input = input('Message: ')
+                rqst = None
 
-            # parse user input
-            if user_input.startswith('/'):
-                action, *args = user_input[1:].split()
-                action = action.lower()
-                if action in ACTION_TPLS:
-                    rqst = compose_request(action, *args)
+                # parse user input
+                if user_input.startswith('/'):
+                    action, *args = user_input[1:].split()
+                    action = action.lower()
+                    if action in ACTION_TPLS:
+                        rqst = compose_request(action, *args)
+                elif user_input:
+                    rqst = compose_request(ACT_MSG, 'somebody',
+                                            account_name, '', user_input)
+
+                if rqst:
+                    send_data(client, rqst)
             else:
-                rqst = compose_request(ACT_MSG, 'somebody',
-                                        account_name, '', user_input)
-
-            if rqst:
-                send_data(client, rqst)
                 resp = receive_data(client)
                 print(resp)
-                if 'Bye' in resp:
-                    break

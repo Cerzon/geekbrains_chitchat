@@ -7,5 +7,5 @@ def start_logger():
     _handler.setFormatter(_format)
     _logger = logging.getLogger()
     _logger.addHandler(_handler)
-    _logger.setLevel(logging.DEBUG)
+    _logger.setLevel(logging.INFO)
     return _logger

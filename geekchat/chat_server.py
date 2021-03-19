@@ -1,5 +1,6 @@
 from contextlib import closing
 import json
+from select import select
 
 from .protocol import (compose_response, check_request, ACT_PRESENCE, ACT_MSG,
                         ACT_QUIT, FIELD_ACC, FIELD_ACTION, FIELD_TIME,
@@ -10,21 +11,68 @@ from .log.server_log_config import start_logger
 from .log.staff import logged
 
 
-start_logger()
+LOGGER = start_logger()
+
+
+@logged
+def read_requests(sockets_to_read, all_connections):
+    
+    requests = {}
+    
+    for source in sockets_to_read:
+        try:
+            data = receive_data(source)
+            requests[source] = data
+        except:
+            LOGGER.info(f'Соединение {source.fileno()} разорвано')
+            all_connections.remove(source)
+            source.close()
+    
+    return requests
+
+
+@logged
+def write_responses(requests, sockets_to_write, all_connections):
+    
+    for source, data in requests.items():
+        for destination in sockets_to_write:
+            if destination is source:
+                continue
+            try:
+                send_data(destination, data)
+            except:
+                LOGGER.info(f'Соединение {destination.fileno()} разорвано')
+                all_connections.remove(destination)
+                destination.close()
 
 
 @logged
 def start_server(addr: str, port: int):
-    srv = chat_socket(addr, port, server=True)
+    srv_listen_socket = chat_socket(addr, port, server=True)
+    srv_listen_socket.settimeout(0.2)
+    wait = 0
 
-    with closing(srv):
+    all_connections = []
 
-        with closing(srv.accept()[0]) as convo:
-            keep_connection = True
-            while keep_connection:
-                incoming = receive_data(convo)
-                response, keep_connection = process_request(incoming)
-                send_data(convo, response)
+    with closing(srv_listen_socket):
+        while True:
+            try:
+                connection, c_addr = srv_listen_socket.accept()
+            except OSError:
+                pass
+            else:
+                LOGGER.info(f'Соединение {connection.fileno()} с адресом {c_addr}')
+                all_connections.append(connection)
+            finally:
+                r = []
+                w = []
+                try:
+                    r, w, _ = select(all_connections, all_connections, [], wait)
+                except:
+                    pass
+
+                requests = read_requests(r, all_connections)
+                write_responses(requests, w, all_connections)
 
 
 @logged
