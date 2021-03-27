@@ -11,9 +11,9 @@ from geekchat.settings import HOST_IP, PORT
 @click.command()
 @click.option('-a', 'addr', default=HOST_IP, type=str)
 @click.option('-p', 'port', default=PORT, type=int)
-@click.option('--sender', is_flag=True)
-def main(addr: str, port: int, sender):
-    start_client(addr, port, sender)
+# @click.option('--sender', is_flag=True)
+def main(addr: str, port: int):
+    start_client(addr, port)
 
 
 main()
